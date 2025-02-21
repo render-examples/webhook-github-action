@@ -1,0 +1,21 @@
+---
+name: example
+
+on:
+  # Allows you to trigger this workflow via the GitHub API
+  workflow_dispatch:
+
+env:
+  GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  print-trigger-info:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.GIT_SHA }}
+    - name: Print Info
+      run: |
+        echo "hello"
