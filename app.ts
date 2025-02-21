@@ -11,7 +11,7 @@ const renderAPIURL = process.env.RENDER_API_URL || "https://api.render.com/v1"
 // To create a Render API token, follow instructions here: https://render.com/docs/api#1-create-an-api-key
 const renderAPIToken = process.env.RENDER_API_TOKEN || '';
 
-const githubAPIToken = process.env.GITHUB_TOKEN || '';
+const githubAPIToken = process.env.GITHUB_API_TOKEN || '';
 const githubOwnerName = process.env.GITHUB_OWNER_NAME || '';
 const githubRepoName = process.env.GITHUB_REPO_NAME || '';
 const githubWorkflowID = process.env.GITHUB_WORKFLOW_ID || 'example.yaml';

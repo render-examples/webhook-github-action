@@ -6,9 +6,9 @@ services:
   branch: create-webhook-github-action
   plan: starter
   envVars:
-  - key: RENDER_API_TOKEN
-    sync: false
   - key: RENDER_WEBHOOK_SECRET
+    sync: false
+  - key: RENDER_API_KEY
     sync: false
   region: oregon
   buildCommand: pnpm install && pnpm run build
