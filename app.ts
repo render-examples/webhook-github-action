@@ -1,4 +1,4 @@
-import { Octokit } from "@octokit/core";
+import {Octokit} from "@octokit/core";
 import express, {NextFunction, Request, Response} from "express";
 import {Webhook, WebhookUnbrandedRequiredHeaders, WebhookVerificationError} from "standardwebhooks"
 
@@ -14,6 +14,7 @@ const renderAPIToken = process.env.RENDER_API_TOKEN || '';
 const githubAPIToken = process.env.GITHUB_TOKEN || '';
 const githubOwnerName = process.env.GITHUB_OWNER_NAME || '';
 const githubRepoName = process.env.GITHUB_REPO_NAME || '';
+const githubWorkflowID = process.env.GITHUB_WORKFLOW_ID || 'example.yaml';
 
 const octokit = new Octokit({
     auth: githubAPIToken
@@ -34,6 +35,17 @@ interface RenderService {
     id: string
     name: string
     repo: string
+    branch: string
+}
+
+interface RenderDeploy {
+    id: string
+    commit?: Commit
+}
+
+interface Commit {
+    id: string
+    message: string
 }
 
 app.post("/webhook", express.raw({type: 'application/json'}), (req: Request, res: Response, next: NextFunction) => {
@@ -85,16 +97,21 @@ async function handleWebhook(payload: WebhookPayload) {
                     return
                 }
 
-                const service: RenderService = await fetchServiceInfo(payload)
-
-                if (! service.repo.includes(`${githubOwnerName}/${githubRepoName}`)) {
-                    console.log(`received deploy success for another service: ${service.name}`)
+                const deploy: RenderDeploy = await fetchDeployInfo(payload.data.serviceId, event.details.deployId)
+                if (!deploy.commit) {
+                    console.log(`ignoring deploy success for image backed service: ${payload.data.serviceId}`)
                     return
                 }
 
-                // TODO trigger github action
+                const service: RenderService = await fetchServiceInfo(payload)
+
+                if (! service.repo.includes(`${githubOwnerName}/${githubRepoName}`)) {
+                    console.log(`ignoring deploy success for another service: ${service.name}`)
+                    return
+                }
+
                 console.log(`triggering github workflow for ${githubOwnerName}/${githubRepoName} for ${service.name}`)
-                await triggerWorkflow()
+                await triggerWorkflow(service.name, service.branch)
                 return
             default:
                 console.log(`unhandled webhook type ${payload.type} for service ${payload.data.serviceId}`)
@@ -104,10 +121,15 @@ async function handleWebhook(payload: WebhookPayload) {
     }
 }
 
-async function triggerWorkflow() {
-    await octokit.request('GET /repos/{owner}/{repo}/actions/workflows', {
+async function triggerWorkflow(serviceName: string, branch: string) {
+    await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
         owner: githubOwnerName,
         repo: githubRepoName,
+        workflow_id: githubWorkflowID,
+        ref: branch,
+        inputs: {
+            // service: serviceName
+        },
         headers: {
             'X-GitHub-Api-Version': '2022-11-28'
         }
@@ -133,6 +155,25 @@ async function fetchEventInfo(payload: WebhookPayload) {
         return res.json()
     } else {
         throw new Error(`unable to fetch event info; received code :${res.status.toString()}`)
+    }
+}
+
+async function fetchDeployInfo(serviceId: string, deployId: string) {
+    const res = await fetch(
+        `${renderAPIURL}/services/${serviceId}/deploys/${deployId}`,
+        {
+            method: "get",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${renderAPIToken}`,
+            },
+        },
+    )
+    if (res.ok) {
+        return res.json()
+    } else {
+        throw new Error(`unable to fetch deploy info; received code :${res.status.toString()}`)
     }
 }
 
