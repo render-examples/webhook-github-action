@@ -1,4 +1,4 @@
-import { Octokit } from "@octokit/core";
+import {Octokit} from "@octokit/core";
 import express, {NextFunction, Request, Response} from "express";
 import {Webhook, WebhookUnbrandedRequiredHeaders, WebhookVerificationError} from "standardwebhooks"
 
@@ -35,6 +35,7 @@ interface RenderService {
     id: string
     name: string
     repo: string
+    branch: string
 }
 
 interface RenderDeploy {
@@ -110,7 +111,7 @@ async function handleWebhook(payload: WebhookPayload) {
                 }
 
                 console.log(`triggering github workflow for ${githubOwnerName}/${githubRepoName} for ${service.name}`)
-                await triggerWorkflow(deploy.commit.id, service.name)
+                await triggerWorkflow(service.name, service.branch)
                 return
             default:
                 console.log(`unhandled webhook type ${payload.type} for service ${payload.data.serviceId}`)
@@ -120,14 +121,14 @@ async function handleWebhook(payload: WebhookPayload) {
     }
 }
 
-async function triggerWorkflow(commit: string, serviceName: string) {
+async function triggerWorkflow(serviceName: string, branch: string) {
     await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
         owner: githubOwnerName,
         repo: githubRepoName,
         workflow_id: githubWorkflowID,
-        ref: commit,
+        ref: branch,
         inputs: {
-            service: serviceName
+            // service: serviceName
         },
         headers: {
             'X-GitHub-Api-Version': '2022-11-28'
