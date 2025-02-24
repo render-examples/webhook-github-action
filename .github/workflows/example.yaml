@@ -4,18 +4,23 @@ name: example
 on:
   # Allows you to trigger this workflow via the GitHub API
   workflow_dispatch:
-
-env:
-  GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    inputs:
+      serviceID:
+        type: string
+        description: 'Render Service ID to deploy (e.g. srv-xxx)'
 
 jobs:
-  print-trigger-info:
+  deploy-service:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ env.GIT_SHA }}
-    - name: Print Info
-      run: |
-        echo "hello"
+      - name: Install Render CLI
+        run: |
+          curl -L https://github.com/render-oss/cli/releases/download/v2.0.0/cli_2.0.0_linux_amd64.zip -o render.zip
+          unzip render.zip
+          sudo mv cli_v2.0.0 /usr/local/bin/render
+      - name: Create Deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          CI: true
+        run: |
+          render deploys create ${{ inputs.serviceID }} --output json --confirm
