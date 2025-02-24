@@ -1,7 +1,7 @@
 import {Octokit} from "@octokit/core";
 import express, {NextFunction, Request, Response} from "express";
 import {Webhook, WebhookUnbrandedRequiredHeaders, WebhookVerificationError} from "standardwebhooks"
-import {RenderDeploy, RenderService, WebhookPayload} from "./render";
+import {RenderDeploy, RenderEvent, RenderService, WebhookPayload} from "./render";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -70,13 +70,13 @@ async function handleWebhook(payload: WebhookPayload) {
                     return
                 }
 
-                const deploy: RenderDeploy = await fetchDeployInfo(payload.data.serviceId, event.details.deployId)
+                const deploy = await fetchDeployInfo(payload.data.serviceId, event.details.deployId)
                 if (!deploy.commit) {
                     console.log(`ignoring deploy success for image backed service: ${payload.data.serviceId}`)
                     return
                 }
 
-                const service: RenderService = await fetchServiceInfo(payload)
+                const service = await fetchServiceInfo(payload)
 
                 if (! service.repo.includes(`${githubOwnerName}/${githubRepoName}`)) {
                     console.log(`ignoring deploy success for another service: ${service.name}`)
@@ -112,7 +112,7 @@ async function triggerWorkflow(serviceName: string, branch: string) {
 // fetchEventInfo fetches the event that triggered the webhook
 // some events have additional information that isn't in the webhook payload
 // for example, deploy events have the deploy id
-async function fetchEventInfo(payload: WebhookPayload) {
+async function fetchEventInfo(payload: WebhookPayload): Promise<RenderEvent> {
     const res = await fetch(
         `${renderAPIURL}/events/${payload.data.id}`,
         {
@@ -131,7 +131,7 @@ async function fetchEventInfo(payload: WebhookPayload) {
     }
 }
 
-async function fetchDeployInfo(serviceId: string, deployId: string) {
+async function fetchDeployInfo(serviceId: string, deployId: string): Promise<RenderDeploy> {
     const res = await fetch(
         `${renderAPIURL}/services/${serviceId}/deploys/${deployId}`,
         {
@@ -150,7 +150,7 @@ async function fetchDeployInfo(serviceId: string, deployId: string) {
     }
 }
 
-async function fetchServiceInfo(payload: WebhookPayload) {
+async function fetchServiceInfo(payload: WebhookPayload): Promise<RenderService> {
     const res = await fetch(
         `${renderAPIURL}/services/${payload.data.serviceId}`,
         {

@@ -25,3 +25,9 @@ export interface RenderDeploy {
     id: string
     commit?: Commit
 }
+
+export interface RenderEvent {
+    id: string
+    type: string
+    details: any
+}
