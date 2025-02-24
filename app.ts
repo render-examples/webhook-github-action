@@ -1,6 +1,7 @@
 import {Octokit} from "@octokit/core";
 import express, {NextFunction, Request, Response} from "express";
 import {Webhook, WebhookUnbrandedRequiredHeaders, WebhookVerificationError} from "standardwebhooks"
+import {RenderDeploy, RenderService, WebhookPayload} from "./render";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -19,34 +20,6 @@ const githubWorkflowID = process.env.GITHUB_WORKFLOW_ID || 'example.yaml';
 const octokit = new Octokit({
     auth: githubAPIToken
 })
-
-interface WebhookData {
-    id: string
-    serviceId: string
-}
-
-interface WebhookPayload {
-    type: string
-    timestamp: Date
-    data: WebhookData
-}
-
-interface RenderService {
-    id: string
-    name: string
-    repo: string
-    branch: string
-}
-
-interface RenderDeploy {
-    id: string
-    commit?: Commit
-}
-
-interface Commit {
-    id: string
-    message: string
-}
 
 app.post("/webhook", express.raw({type: 'application/json'}), (req: Request, res: Response, next: NextFunction) => {
     try {
